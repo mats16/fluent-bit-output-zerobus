@@ -62,12 +62,13 @@ make docker
 CREATE TABLE IF NOT EXISTS main.default.zerobus_fluent_bit (
   message STRING,
   level STRING,
+  _raw STRING,
   _time TIMESTAMP,
   _tag STRING
 );
 ```
 
-> **注意:** 上記のスキーマは組み込みの dummy インプットに対応しています。実際のインプットデータに合わせてカラムを調整してください。
+> **注意:** 上記のスキーマは `log_key` と `raw_log_key` を設定した組み込みの dummy インプットに対応しています。実際のインプットデータとプラグイン設定に合わせてカラムを調整してください。
 
 2. Docker イメージを実行します。デフォルトでは dummy インプットが 5 秒ごとにテストレコードを送信します。
 
