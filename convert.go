@@ -70,6 +70,29 @@ func convertRecord(record map[interface{}]interface{}) map[string]interface{} {
 func recordToJSON(ts interface{}, record map[interface{}]interface{}, tag string, cfg *FlushConfig) ([]byte, error) {
 	m := convertRecord(record)
 
+	var rawJSON string
+	if cfg.RawLogKey != "" {
+		raw, err := json.Marshal(m)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal raw record: %w", err)
+		}
+		rawJSON = string(raw)
+	}
+
+	if len(cfg.LogKeys) > 0 {
+		filtered := make(map[string]interface{}, len(cfg.LogKeys))
+		for _, k := range cfg.LogKeys {
+			if v, exists := m[k]; exists {
+				filtered[k] = v
+			}
+		}
+		m = filtered
+	}
+
+	if cfg.RawLogKey != "" {
+		m[cfg.RawLogKey] = rawJSON
+	}
+
 	if cfg.TimeKey != "" {
 		if _, exists := m[cfg.TimeKey]; !exists {
 			if s, ok := formatTimestamp(ts); ok {

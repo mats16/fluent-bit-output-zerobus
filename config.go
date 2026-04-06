@@ -19,8 +19,10 @@ type PluginConfig struct {
 	ClientSecret    string // OAuth2 client secret
 
 	// Optional
-	AddTag  bool   // Add Fluent Bit tag as _tag field (default: true)
-	TimeKey string // Timestamp field name, empty to disable (default: "_time")
+	AddTag  bool     // Add Fluent Bit tag as _tag field (default: true)
+	TimeKey string   // Timestamp field name, empty to disable (default: "_time")
+	LogKeys   []string // If non-empty, only these keys are included in the output record
+	RawLogKey string   // If non-empty, store the raw record as a JSON string in this field
 }
 
 // ensureURLScheme prepends "https://" if the value has no scheme.
@@ -74,6 +76,16 @@ func parseConfig(plugin unsafe.Pointer) (*PluginConfig, error) {
 
 	if v := output.FLBPluginConfigKey(plugin, "time_key"); v != "" {
 		cfg.TimeKey = v
+	}
+
+	cfg.RawLogKey = output.FLBPluginConfigKey(plugin, "raw_log_key")
+
+	if v := output.FLBPluginConfigKey(plugin, "log_key"); v != "" {
+		for _, k := range strings.Split(v, ",") {
+			if trimmed := strings.TrimSpace(k); trimmed != "" {
+				cfg.LogKeys = append(cfg.LogKeys, trimmed)
+			}
+		}
 	}
 
 	return cfg, nil

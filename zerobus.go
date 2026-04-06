@@ -10,8 +10,10 @@ import (
 
 // FlushConfig holds the subset of PluginConfig needed during flush operations.
 type FlushConfig struct {
-	AddTag  bool
-	TimeKey string
+	AddTag    bool
+	TimeKey   string
+	LogKeys   []string
+	RawLogKey string
 }
 
 // ZeroBusClient wraps the ZeroBus SDK and provides a simplified interface
@@ -49,8 +51,10 @@ func NewZeroBusClient(cfg *PluginConfig) (*ZeroBusClient, error) {
 		sdk:    sdk,
 		stream: stream,
 		FlushConfig: FlushConfig{
-			AddTag:  cfg.AddTag,
-			TimeKey: cfg.TimeKey,
+			AddTag:    cfg.AddTag,
+			TimeKey:   cfg.TimeKey,
+			LogKeys:   cfg.LogKeys,
+			RawLogKey: cfg.RawLogKey,
 		},
 	}, nil
 }
