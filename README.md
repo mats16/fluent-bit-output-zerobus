@@ -28,6 +28,8 @@ This produces `out_zerobus.so` which can be loaded by Fluent Bit.
 | `client_secret` | Yes | - | Service principal secret |
 | `add_tag` | No | `true` | Add Fluent Bit tag as `_tag` field |
 | `time_key` | No | `_time` | Timestamp field name (empty string to disable) |
+| `log_key` | No | - | Comma-separated list of keys to include in the output record. If omitted, all fields are sent. |
+| `raw_log_key` | No | - | If set, stores the full original record as a JSON string in this field (before `log_key` filtering). |
 
 > **Note:** If `zerobus_endpoint` or `workspace_url` is provided without an `https://` prefix, the plugin will automatically prepend it.
 
@@ -42,6 +44,8 @@ This produces `out_zerobus.so` which can be loaded by Fluent Bit.
     workspace_url     ${DATABRICKS_HOST}
     client_id         ${DATABRICKS_CLIENT_ID}
     client_secret     ${DATABRICKS_CLIENT_SECRET}
+    log_key           message, level
+    raw_log_key       _raw
 ```
 
 ## Docker
@@ -58,12 +62,13 @@ make docker
 CREATE TABLE IF NOT EXISTS main.default.zerobus_fluent_bit (
   message STRING,
   level STRING,
+  _raw STRING,
   _time TIMESTAMP,
   _tag STRING
 );
 ```
 
-> **Note:** The schema above matches the built-in dummy input. Adjust columns to match your actual input data.
+> **Note:** The schema above matches the built-in dummy input with `log_key` and `raw_log_key` configured. Adjust columns to match your actual input data and plugin settings.
 
 2. Run the Docker image. By default, the dummy input sends a test record every 5 seconds.
 

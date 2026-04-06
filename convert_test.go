@@ -230,6 +230,107 @@ func TestRecordToJSON(t *testing.T) {
 		}
 	})
 
+	t.Run("log_key filters fields", func(t *testing.T) {
+		cfgKeys := &FlushConfig{AddTag: true, TimeKey: "_time", LogKeys: []string{"message", "level"}}
+		ts := output.FLBTime{Time: time.Date(2026, 4, 6, 12, 0, 0, 0, time.UTC)}
+		record := imap("message", []byte("hello"), "level", []byte("info"), "extra", []byte("dropped"))
+
+		jsonBytes, err := recordToJSON(ts, record, "test.tag", cfgKeys)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var m map[string]interface{}
+		json.Unmarshal(jsonBytes, &m)
+
+		if m["message"] != "hello" {
+			t.Errorf("message = %v, want 'hello'", m["message"])
+		}
+		if m["level"] != "info" {
+			t.Errorf("level = %v, want 'info'", m["level"])
+		}
+		if _, exists := m["extra"]; exists {
+			t.Error("extra should be filtered out by log_key")
+		}
+		if m["_time"] == nil {
+			t.Error("_time should still be added")
+		}
+		if m["_tag"] != "test.tag" {
+			t.Errorf("_tag = %v, want 'test.tag'", m["_tag"])
+		}
+	})
+
+	t.Run("log_key empty sends all fields", func(t *testing.T) {
+		cfgAll := &FlushConfig{AddTag: false, TimeKey: "", LogKeys: nil}
+		record := imap("a", []byte("1"), "b", []byte("2"))
+
+		jsonBytes, err := recordToJSON(nil, record, "", cfgAll)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var m map[string]interface{}
+		json.Unmarshal(jsonBytes, &m)
+
+		if len(m) != 2 {
+			t.Errorf("expected 2 fields, got %d: %v", len(m), m)
+		}
+	})
+
+	t.Run("raw_log_key stores full record as JSON string", func(t *testing.T) {
+		cfgRaw := &FlushConfig{AddTag: false, TimeKey: "", RawLogKey: "_raw"}
+		record := imap("message", []byte("hello"), "level", []byte("info"))
+
+		jsonBytes, err := recordToJSON(nil, record, "", cfgRaw)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var m map[string]interface{}
+		json.Unmarshal(jsonBytes, &m)
+
+		rawStr, ok := m["_raw"].(string)
+		if !ok {
+			t.Fatalf("_raw should be a string, got %T", m["_raw"])
+		}
+
+		var raw map[string]interface{}
+		if err := json.Unmarshal([]byte(rawStr), &raw); err != nil {
+			t.Fatalf("_raw is not valid JSON: %v", err)
+		}
+		if raw["message"] != "hello" || raw["level"] != "info" {
+			t.Errorf("_raw content mismatch: %v", raw)
+		}
+	})
+
+	t.Run("raw_log_key with log_key keeps raw before filter", func(t *testing.T) {
+		cfgBoth := &FlushConfig{AddTag: false, TimeKey: "", LogKeys: []string{"message"}, RawLogKey: "_raw"}
+		record := imap("message", []byte("hello"), "level", []byte("info"), "extra", []byte("data"))
+
+		jsonBytes, err := recordToJSON(nil, record, "", cfgBoth)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var m map[string]interface{}
+		json.Unmarshal(jsonBytes, &m)
+
+		if m["message"] != "hello" {
+			t.Errorf("message = %v, want 'hello'", m["message"])
+		}
+		if _, exists := m["level"]; exists {
+			t.Error("level should be filtered out by log_key")
+		}
+
+		rawStr := m["_raw"].(string)
+		var raw map[string]interface{}
+		json.Unmarshal([]byte(rawStr), &raw)
+
+		if raw["message"] != "hello" || raw["level"] != "info" || raw["extra"] != "data" {
+			t.Errorf("_raw should contain all original fields: %v", raw)
+		}
+	})
+
 	t.Run("existing tag not overwritten", func(t *testing.T) {
 		record := imap("_tag", []byte("original-tag"))
 
