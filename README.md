@@ -37,9 +37,9 @@ This produces `out_zerobus.so` which can be loaded by Fluent Bit.
 [OUTPUT]
     Name              zerobus
     Match             *
-    zerobus_endpoint  https://${ZEROBUS_SHARD_ID}.zerobus.${AWS_REGION}.cloud.databricks.com
-    workspace_url     https://${DATABRICKS_HOST}
-    table_name        catalog.schema.logs
+    zerobus_endpoint  ${ZEROBUS_ENDPOINT}
+    table_name        ${ZEROBUS_TABLE_NAME}
+    workspace_url     ${DATABRICKS_HOST}
     client_id         ${DATABRICKS_CLIENT_ID}
     client_secret     ${DATABRICKS_CLIENT_SECRET}
 ```
@@ -48,14 +48,39 @@ This produces `out_zerobus.so` which can be loaded by Fluent Bit.
 
 ```bash
 make docker
+```
 
-docker run -e ZEROBUS_SHARD_ID=... \
-           -e AWS_REGION=us-west-2 \
-           -e DATABRICKS_HOST=... \
-           -e ZEROBUS_TABLE_NAME=catalog.schema.logs \
-           -e DATABRICKS_CLIENT_ID=... \
-           -e DATABRICKS_CLIENT_SECRET=... \
-           fluent-bit-zerobus
+### Quick Start
+
+1. Create the destination Delta table.
+
+```sql
+CREATE TABLE IF NOT EXISTS main.default.zerobus_fluent_bit (
+  message STRING,
+  level STRING,
+  _time TIMESTAMP,
+  _tag STRING
+);
+```
+
+> **Note:** The schema above matches the built-in dummy input. Adjust columns to match your actual input data.
+
+2. Run the Docker image. By default, the dummy input sends a test record every 5 seconds.
+
+```bash
+docker run --rm -it \
+  -e ZEROBUS_ENDPOINT=<workspace-id>.zerobus.<region>.cloud.databricks.com \
+  -e ZEROBUS_TABLE_NAME=main.default.zerobus_fluent_bit \
+  -e DATABRICKS_HOST=https://<instance>.cloud.databricks.com \
+  -e DATABRICKS_CLIENT_ID=<service-principal-client-id> \
+  -e DATABRICKS_CLIENT_SECRET=<service-principal-secret> \
+  -it fluent-bit-zerobus
+```
+
+3. Verify that records are being written to the table.
+
+```sql
+SELECT * FROM main.default.zerobus_fluent_bit ORDER BY _time DESC LIMIT 10;
 ```
 
 ## How It Works
