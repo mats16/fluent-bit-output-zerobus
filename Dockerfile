@@ -1,5 +1,6 @@
-FROM golang:1.21 AS builder
+FROM golang:1.25 AS builder
 
+ARG GOPROXY=https://proxy.golang.org,direct
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

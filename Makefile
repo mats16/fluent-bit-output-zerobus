@@ -18,4 +18,4 @@ clean:
 	rm -f $(PLUGIN_NAME).so $(PLUGIN_NAME).h
 
 docker:
-	docker build -t fluent-bit-zerobus .
+	docker build --build-arg GOPROXY=$(GOPROXY) -t fluent-bit-zerobus .
